@@ -15,20 +15,22 @@ export default function HomeScreen() {
   }, [])
 
   async function hacerReserva() {
-    if (!seleccionado) return
-    const { error } = await supabase.from("pedidos").insert({
-      lavadero_id: seleccionado.id,
-      lavadero_nombre: seleccionado.nombre,
-      precio: seleccionado.precio,
-      estado: "pendiente"
-    })
-    if (error) {
-      console.log("Error:", error.message)
-    } else {
-      setSeleccionado(null)
-      alert("¡Reserva confirmada!")
-    }
+  if (!seleccionado) return
+  const { data: { user } } = await supabase.auth.getUser()
+  const { error } = await supabase.from("pedidos").insert({
+    lavadero_id: seleccionado.id,
+    lavadero_nombre: seleccionado.nombre,
+    precio: seleccionado.precio,
+    estado: "pendiente",
+    user_id: user?.id
+  })
+  if (error) {
+    console.log("Error:", error.message)
+  } else {
+    setSeleccionado(null)
+    alert("¡Reserva confirmada!")
   }
+}
 
   return (
     <View style={{ flex: 1 }}>
