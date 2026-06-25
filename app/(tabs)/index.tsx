@@ -1,14 +1,34 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native'
-
-const lavaderos = [
-  { id: 1, nombre: "4H Studio Detailing", calificacion: 4.8, abierto: true, precio: 50000 },
-  { id: 2, nombre: "Lavadero Palermo", calificacion: 4.6, abierto: true, precio: 65000 },
-  { id: 3, nombre: "AutoSpa Center", calificacion: 4.2, abierto: false, precio: 45000 }
-]
+import { supabase } from '../../supabase'
 
 export default function HomeScreen() {
+  const [lavaderos, setLavaderos] = useState<any[]>([])
   const [seleccionado, setSeleccionado] = useState<any>(null)
+
+  useEffect(() => {
+    async function cargarLavaderos() {
+      const { data } = await supabase.from("lavaderos").select("*")
+      if (data) setLavaderos(data)
+    }
+    cargarLavaderos()
+  }, [])
+
+ async function hacerReserva() {
+  if (!seleccionado) return
+  const { error } = await supabase.from("pedidos").insert({
+    lavadero_id: seleccionado.id,
+    lavadero_nombre: seleccionado.nombre,
+    precio: seleccionado.precio,
+    estado: "pendiente"
+  })
+  if (error) {
+    console.log("Error:", error.message)
+  } else {
+    setSeleccionado(null)
+    alert("¡Reserva confirmada!")
+  }
+}
 
   return (
     <View style={{ flex: 1 }}>
@@ -48,7 +68,7 @@ export default function HomeScreen() {
               {seleccionado?.abierto ? '✓ Abierto' : '✗ Cerrado'}
             </Text>
             {seleccionado?.abierto ? (
-              <TouchableOpacity style={styles.boton}>
+              <TouchableOpacity style={styles.boton} onPress={hacerReserva}>
                 <Text style={styles.botonTexto}>Reservar</Text>
               </TouchableOpacity>
             ) : (
