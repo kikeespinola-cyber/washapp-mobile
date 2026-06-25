@@ -14,24 +14,31 @@ export default function HomeScreen() {
     cargarLavaderos()
   }, [])
 
- async function hacerReserva() {
-  if (!seleccionado) return
-  const { error } = await supabase.from("pedidos").insert({
-    lavadero_id: seleccionado.id,
-    lavadero_nombre: seleccionado.nombre,
-    precio: seleccionado.precio,
-    estado: "pendiente"
-  })
-  if (error) {
-    console.log("Error:", error.message)
-  } else {
-    setSeleccionado(null)
-    alert("¡Reserva confirmada!")
+  async function hacerReserva() {
+    if (!seleccionado) return
+    const { error } = await supabase.from("pedidos").insert({
+      lavadero_id: seleccionado.id,
+      lavadero_nombre: seleccionado.nombre,
+      precio: seleccionado.precio,
+      estado: "pendiente"
+    })
+    if (error) {
+      console.log("Error:", error.message)
+    } else {
+      setSeleccionado(null)
+      alert("¡Reserva confirmada!")
+    }
   }
-}
 
   return (
     <View style={{ flex: 1 }}>
+      <TouchableOpacity
+        onPress={() => supabase.auth.signOut()}
+        style={{ position: 'absolute', top: 60, right: 20, zIndex: 10 }}
+      >
+        <Text style={{ color: '#E24B4A', fontSize: 13 }}>Salir</Text>
+      </TouchableOpacity>
+
       <ScrollView style={styles.container}>
         <Text style={styles.titulo}>WashApp</Text>
         <Text style={styles.subtitulo}>Encontrá el mejor lavadero cerca de vos</Text>
