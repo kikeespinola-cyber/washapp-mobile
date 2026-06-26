@@ -5,6 +5,8 @@ import { supabase } from '../../supabase'
 export default function HomeScreen() {
   const [lavaderos, setLavaderos] = useState<any[]>([])
   const [seleccionado, setSeleccionado] = useState<any>(null)
+  const [servicios, setServicios] = useState<any[]>([])
+  const [servicioElegido, setServicioElegido] = useState<any>(null)
 
   useEffect(() => {
     async function cargarLavaderos() {
@@ -14,14 +16,22 @@ export default function HomeScreen() {
     cargarLavaderos()
   }, [])
 
+  async function cargarServicios(lavaderoNombre: string) {
+    const { data } = await supabase
+      .from("servicios")
+      .select("*")
+      .eq("lavadero_nombre", lavaderoNombre)
+    if (data) setServicios(data)
+  }
+
   async function hacerReserva() {
-    if (!seleccionado) return
+    if (!seleccionado || !servicioElegido) return
     const lavaderoActual = seleccionado
     const { data: { user } } = await supabase.auth.getUser()
     const { error } = await supabase.from("pedidos").insert({
       lavadero_id: lavaderoActual.id,
       lavadero_nombre: lavaderoActual.nombre,
-      precio: lavaderoActual.precio,
+      precio: servicioElegido.precio,
       estado: "pendiente",
       user_id: user?.id
     })
@@ -29,9 +39,10 @@ export default function HomeScreen() {
       console.log("Error:", error.message)
     } else {
       setSeleccionado(null)
+      setServicioElegido(null)
       alert("¡Reserva confirmada!")
       if (lavaderoActual.whatsapp) {
-        const mensaje = `Hola! Acabo de hacer una reserva en WashApp para ${lavaderoActual.nombre}. Precio: Gs. ${lavaderoActual.precio}.`
+        const mensaje = `Hola! Acabo de hacer una reserva en WashApp para ${lavaderoActual.nombre}. Servicio: ${servicioElegido.nombre}. Precio: Gs. ${servicioElegido.precio}.`
         const url = `https://wa.me/${lavaderoActual.whatsapp}?text=${encodeURIComponent(mensaje)}`
         Linking.openURL(url)
       }
@@ -45,9 +56,9 @@ export default function HomeScreen() {
         <Text style={styles.subtitulo}>Encontrá el mejor lavadero cerca de vos</Text>
 
         {lavaderos.map((lavadero) => (
-          <View key={lavadero.id} style={styles.card}>
+          <View key={lavadero.nombre} style={styles.card}>
             <Text style={styles.nombre}>{lavadero.nombre}</Text>
-	    <Text style={{ color: '#888', fontSize: 12 }}>📍 {lavadero.zona}</Text>
+            <Text style={{ color: '#888', fontSize: 12 }}>📍 {lavadero.zona}</Text>
             <Text>⭐ {lavadero.calificacion}</Text>
             <Text>Precio: Gs. {lavadero.precio}</Text>
             <Text style={{ color: lavadero.abierto ? '#1D9E75' : '#E24B4A' }}>
@@ -55,7 +66,11 @@ export default function HomeScreen() {
             </Text>
             <TouchableOpacity
               style={styles.boton}
-              onPress={() => setSeleccionado(lavadero)}
+              onPress={() => {
+                setSeleccionado(lavadero)
+                setServicioElegido(null)
+                cargarServicios(lavadero.nombre)
+              }}
             >
               <Text style={styles.botonTexto}>Ver detalle</Text>
             </TouchableOpacity>
@@ -69,28 +84,53 @@ export default function HomeScreen() {
         animationType="slide"
       >
         <View style={styles.modalFondo}>
-          <View style={styles.modalPanel}>
+          <ScrollView style={styles.modalPanel}>
             <Text style={styles.nombre}>{seleccionado?.nombre}</Text>
             <Text>⭐ {seleccionado?.calificacion}</Text>
             <Text style={{ color: '#888', fontSize: 12, marginBottom: 8 }}>📍 {seleccionado?.zona}</Text>
-            <Text>Precio: Gs. {seleccionado?.precio}</Text>
-            <Text style={{ color: seleccionado?.abierto ? '#1D9E75' : '#E24B4A', marginBottom: 16 }}>
-              {seleccionado?.abierto ? '✓ Abierto' : '✗ Cerrado'}
-            </Text>
+
+            <Text style={{ fontSize: 13, fontWeight: '500', marginTop: 8, marginBottom: 6 }}>Elegí un servicio:</Text>
+            {servicios.map((servicio) => (
+              <TouchableOpacity
+                key={servicio.id}
+                onPress={() => setServicioElegido(servicio)}
+                style={{
+                  padding: 10,
+                  borderRadius: 8,
+                  marginBottom: 6,
+                  borderWidth: 1.5,
+                  borderColor: servicioElegido?.id === servicio.id ? '#1D9E75' : '#e0e0e0',
+                  backgroundColor: servicioElegido?.id === servicio.id ? '#E1F5EE' : '#fff'
+                }}
+              >
+                <Text style={{ fontWeight: '500' }}>{servicio.nombre}</Text>
+                <Text style={{ color: '#1D9E75', fontSize: 12 }}>Gs. {servicio.precio} · {servicio.duracion_minutos} min</Text>
+              </TouchableOpacity>
+            ))}
+
             {seleccionado?.abierto ? (
-              <TouchableOpacity style={styles.boton} onPress={hacerReserva}>
-                <Text style={styles.botonTexto}>Reservar</Text>
+              <TouchableOpacity
+                style={[styles.boton, { opacity: servicioElegido ? 1 : 0.4 }]}
+                onPress={hacerReserva}
+              >
+                <Text style={styles.botonTexto}>
+                  {servicioElegido ? `Reservar — Gs. ${servicioElegido.precio}` : 'Elegí un servicio'}
+                </Text>
               </TouchableOpacity>
             ) : (
               <Text style={{ color: '#E24B4A' }}>No disponible</Text>
             )}
+
             <TouchableOpacity
               style={[styles.boton, { backgroundColor: '#f1f1f1', marginTop: 10 }]}
-              onPress={() => setSeleccionado(null)}
+              onPress={() => {
+                setSeleccionado(null)
+                setServicioElegido(null)
+              }}
             >
               <Text style={{ color: '#555', fontWeight: 'bold' }}>Cerrar</Text>
             </TouchableOpacity>
-          </View>
+          </ScrollView>
         </View>
       </Modal>
     </View>
@@ -147,6 +187,7 @@ const styles = StyleSheet.create({
   modalPanel: {
     backgroundColor: '#fff',
     borderRadius: 20,
-    padding: 24
+    padding: 24,
+    maxHeight: '80%'
   }
 })
