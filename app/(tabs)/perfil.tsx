@@ -5,13 +5,17 @@ import { supabase } from '../../supabase'
 export default function Perfil() {
   const [email, setEmail] = useState('')
   const [rol, setRol] = useState('')
-  const [stats, setStats] = useState({
+  const [statsAdmin, setStatsAdmin] = useState({
     totalPedidos: 0,
     pendientes: 0,
     completados: 0,
     ingresosMes: 0,
-    calificacion: 0,
-    lavaderoNombre: ''
+  })
+  const [statsUsuario, setStatsUsuario] = useState({
+    totalReservas: 0,
+    completados: 0,
+    gastado: 0,
+    ultimoLavadero: ''
   })
 
   useEffect(() => {
@@ -28,24 +32,29 @@ export default function Perfil() {
       if (perfil) setRol(perfil.rol)
 
       if (perfil?.rol === 'lavadero') {
+        const { data: pedidos } = await supabase.from("pedidos").select("*")
+        if (pedidos) {
+          setStatsAdmin({
+            totalPedidos: pedidos.length,
+            pendientes: pedidos.filter(p => p.estado === 'pendiente').length,
+            completados: pedidos.filter(p => p.estado === 'listo' || p.estado === 'completado').length,
+            ingresosMes: pedidos
+              .filter(p => p.estado === 'listo' || p.estado === 'completado')
+              .reduce((acc, p) => acc + (p.precio || 0), 0)
+          })
+        }
+      } else {
         const { data: pedidos } = await supabase
           .from("pedidos")
           .select("*")
-
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
         if (pedidos) {
-          const pendientes = pedidos.filter(p => p.estado === 'pendiente').length
-          const completados = pedidos.filter(p => p.estado === 'listo' || p.estado === 'completado').length
-          const ingresosMes = pedidos
-            .filter(p => p.estado === 'listo' || p.estado === 'completado')
-            .reduce((acc, p) => acc + (p.precio || 0), 0)
-
-          setStats({
-            totalPedidos: pedidos.length,
-            pendientes,
-            completados,
-            ingresosMes,
-            calificacion: 4.8,
-            lavaderoNombre: pedidos[0]?.lavadero_nombre ?? ''
+          setStatsUsuario({
+            totalReservas: pedidos.length,
+            completados: pedidos.filter(p => p.estado === 'listo' || p.estado === 'completado').length,
+            gastado: pedidos.reduce((acc, p) => acc + (p.precio || 0), 0),
+            ultimoLavadero: pedidos[0]?.lavadero_nombre ?? '—'
           })
         }
       }
@@ -53,42 +62,74 @@ export default function Perfil() {
     cargarDatos()
   }, [])
 
+  const LogoHeader = () => (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 24 }}>
+      <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: '#1D9E75', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+        <Text style={{ fontSize: 22, fontWeight: 'bold', color: 'white' }}>W</Text>
+        <View style={{ position: 'absolute', top: 4, right: 4, width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.9)' }} />
+        <View style={{ position: 'absolute', top: 2, right: 13, width: 5, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.6)' }} />
+        <View style={{ position: 'absolute', top: 8, right: 1, width: 4, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.4)' }} />
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+        <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#1D9E75' }}>Wash</Text>
+        <Text style={{ fontSize: 24, fontWeight: '300', color: '#0F1923' }}>App</Text>
+      </View>
+    </View>
+  )
+
   return (
     <ScrollView style={styles.container}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 24 }}>
-        <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: '#1D9E75', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-          <Text style={{ fontSize: 22, fontWeight: 'bold', color: 'white' }}>W</Text>
-          <View style={{ position: 'absolute', top: 4, right: 4, width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.9)' }} />
-          <View style={{ position: 'absolute', top: 2, right: 13, width: 5, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.6)' }} />
-          <View style={{ position: 'absolute', top: 8, right: 1, width: 4, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.4)' }} />
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-          <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#1D9E75' }}>Wash</Text>
-          <Text style={{ fontSize: 24, fontWeight: '300', color: '#0F1923' }}>App</Text>
-        </View>
-      </View>
+      <LogoHeader />
 
-      {rol === 'lavadero' && (
+      {rol === 'lavadero' ? (
         <>
           <Text style={styles.seccion}>Resumen del negocio</Text>
           <View style={styles.grid}>
             <View style={styles.statCard}>
-              <Text style={styles.statVal}>{stats.totalPedidos}</Text>
+              <Text style={styles.statVal}>{statsAdmin.totalPedidos}</Text>
               <Text style={styles.statLbl}>Pedidos totales</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={[styles.statVal, { color: '#F59E0B' }]}>{stats.pendientes}</Text>
+              <Text style={[styles.statVal, { color: '#F59E0B' }]}>{statsAdmin.pendientes}</Text>
               <Text style={styles.statLbl}>Pendientes</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={[styles.statVal, { color: '#1D9E75' }]}>{stats.completados}</Text>
+              <Text style={[styles.statVal, { color: '#1D9E75' }]}>{statsAdmin.completados}</Text>
               <Text style={styles.statLbl}>Completados</Text>
             </View>
             <View style={styles.statCard}>
               <Text style={[styles.statVal, { color: '#1D9E75', fontSize: 14 }]}>
-                Gs. {stats.ingresosMes.toLocaleString('es-PY')}
+                Gs. {statsAdmin.ingresosMes.toLocaleString('es-PY')}
               </Text>
               <Text style={styles.statLbl}>Ingresos totales</Text>
+            </View>
+          </View>
+        </>
+      ) : (
+        <>
+          <Text style={styles.seccion}>Mi actividad</Text>
+          <View style={styles.grid}>
+            <View style={styles.statCard}>
+              <Text style={styles.statVal}>{statsUsuario.totalReservas}</Text>
+              <Text style={styles.statLbl}>Reservas totales</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={[styles.statVal, { color: '#1D9E75' }]}>{statsUsuario.completados}</Text>
+              <Text style={styles.statLbl}>Completados</Text>
+            </View>
+            <View style={[styles.statCard, { width: '100%' }]}>
+              <Text style={[styles.statVal, { color: '#1D9E75', fontSize: 16 }]}>
+                Gs. {statsUsuario.gastado.toLocaleString('es-PY')}
+              </Text>
+              <Text style={styles.statLbl}>Total invertido en lavados</Text>
+            </View>
+          </View>
+
+          <Text style={styles.seccion}>Último lavadero</Text>
+          <View style={styles.card}>
+            <View style={styles.fila}>
+              <Text style={styles.filaLbl}>Lavadero</Text>
+              <Text style={styles.filaVal}>{statsUsuario.ultimoLavadero}</Text>
             </View>
           </View>
         </>
@@ -100,7 +141,7 @@ export default function Perfil() {
           <Text style={styles.filaLbl}>Email</Text>
           <Text style={styles.filaVal}>{email}</Text>
         </View>
-        <View style={styles.fila}>
+        <View style={[styles.fila, { borderBottomWidth: 0 }]}>
           <Text style={styles.filaLbl}>Rol</Text>
           <View style={{ backgroundColor: rol === 'lavadero' ? '#E1F5EE' : '#f1f1f1', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 6 }}>
             <Text style={{ fontSize: 12, fontWeight: '500', color: rol === 'lavadero' ? '#085041' : '#555' }}>
