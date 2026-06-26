@@ -47,6 +47,7 @@ export default function HomeScreen() {
         {lavaderos.map((lavadero) => (
           <View key={lavadero.id} style={styles.card}>
             <Text style={styles.nombre}>{lavadero.nombre}</Text>
+	    <Text style={{ color: '#888', fontSize: 12 }}>📍 {lavadero.zona}</Text>
             <Text>⭐ {lavadero.calificacion}</Text>
             <Text>Precio: Gs. {lavadero.precio}</Text>
             <Text style={{ color: lavadero.abierto ? '#1D9E75' : '#E24B4A' }}>
@@ -71,6 +72,7 @@ export default function HomeScreen() {
           <View style={styles.modalPanel}>
             <Text style={styles.nombre}>{seleccionado?.nombre}</Text>
             <Text>⭐ {seleccionado?.calificacion}</Text>
+            <Text style={{ color: '#888', fontSize: 12, marginBottom: 8 }}>📍 {seleccionado?.zona}</Text>
             <Text>Precio: Gs. {seleccionado?.precio}</Text>
             <Text style={{ color: seleccionado?.abierto ? '#1D9E75' : '#E24B4A', marginBottom: 16 }}>
               {seleccionado?.abierto ? '✓ Abierto' : '✗ Cerrado'}
