@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Linking } from 'react-native'
 import { supabase } from '../../supabase'
 
 export default function HomeScreen() {
@@ -15,22 +15,28 @@ export default function HomeScreen() {
   }, [])
 
   async function hacerReserva() {
-  if (!seleccionado) return
-  const { data: { user } } = await supabase.auth.getUser()
-  const { error } = await supabase.from("pedidos").insert({
-    lavadero_id: seleccionado.id,
-    lavadero_nombre: seleccionado.nombre,
-    precio: seleccionado.precio,
-    estado: "pendiente",
-    user_id: user?.id
-  })
-  if (error) {
-    console.log("Error:", error.message)
-  } else {
-    setSeleccionado(null)
-    alert("¡Reserva confirmada!")
+    if (!seleccionado) return
+    const lavaderoActual = seleccionado
+    const { data: { user } } = await supabase.auth.getUser()
+    const { error } = await supabase.from("pedidos").insert({
+      lavadero_id: lavaderoActual.id,
+      lavadero_nombre: lavaderoActual.nombre,
+      precio: lavaderoActual.precio,
+      estado: "pendiente",
+      user_id: user?.id
+    })
+    if (error) {
+      console.log("Error:", error.message)
+    } else {
+      setSeleccionado(null)
+      alert("¡Reserva confirmada!")
+      if (lavaderoActual.whatsapp) {
+        const mensaje = `Hola! Acabo de hacer una reserva en WashApp para ${lavaderoActual.nombre}. Precio: Gs. ${lavaderoActual.precio}.`
+        const url = `https://wa.me/${lavaderoActual.whatsapp}?text=${encodeURIComponent(mensaje)}`
+        Linking.openURL(url)
+      }
+    }
   }
-}
 
   return (
     <View style={{ flex: 1 }}>
