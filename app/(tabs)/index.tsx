@@ -57,10 +57,16 @@ export default function HomeScreen() {
 
         {lavaderos.map((lavadero) => (
           <View key={lavadero.nombre} style={styles.card}>
-            <Text style={styles.nombre}>{lavadero.nombre}</Text>
-            <Text style={{ color: '#888', fontSize: 12 }}>📍 {lavadero.zona}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+              <View style={{ width: 44, height: 44, borderRadius: 10, backgroundColor: '#E1F5EE', alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ fontSize: 22 }}>🚗</Text>
+              </View>
+              <View>
+                <Text style={styles.nombre}>{lavadero.nombre}</Text>
+                <Text style={{ color: '#888', fontSize: 12 }}>📍 {lavadero.zona}</Text>
+              </View>
+            </View>
             <Text>⭐ {lavadero.calificacion}</Text>
-            <Text>Precio: Gs. {lavadero.precio}</Text>
             <Text style={{ color: lavadero.abierto ? '#1D9E75' : '#E24B4A' }}>
               {lavadero.abierto ? '✓ Abierto' : '✗ Cerrado'}
             </Text>
@@ -85,11 +91,18 @@ export default function HomeScreen() {
       >
         <View style={styles.modalFondo}>
           <ScrollView style={styles.modalPanel}>
-            <Text style={styles.nombre}>{seleccionado?.nombre}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+              <View style={{ width: 50, height: 50, borderRadius: 12, backgroundColor: '#E1F5EE', alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ fontSize: 26 }}>🚗</Text>
+              </View>
+              <View>
+                <Text style={styles.nombre}>{seleccionado?.nombre}</Text>
+                <Text style={{ color: '#888', fontSize: 12 }}>📍 {seleccionado?.zona}</Text>
+              </View>
+            </View>
             <Text>⭐ {seleccionado?.calificacion}</Text>
-            <Text style={{ color: '#888', fontSize: 12, marginBottom: 8 }}>📍 {seleccionado?.zona}</Text>
 
-            <Text style={{ fontSize: 13, fontWeight: '500', marginTop: 8, marginBottom: 6 }}>Elegí un servicio:</Text>
+            <Text style={{ fontSize: 13, fontWeight: '500', marginTop: 12, marginBottom: 6 }}>Elegí un servicio:</Text>
             {servicios.map((servicio) => (
               <TouchableOpacity
                 key={servicio.id}
