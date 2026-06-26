@@ -7,14 +7,17 @@ export default function HomeScreen() {
   const [seleccionado, setSeleccionado] = useState<any>(null)
   const [servicios, setServicios] = useState<any[]>([])
   const [servicioElegido, setServicioElegido] = useState<any>(null)
+  const [nombreUsuario, setNombreUsuario] = useState<string>('')
 
   useEffect(() => {
-    async function cargarLavaderos() {
-      const { data } = await supabase.from("lavaderos").select("*")
-      if (data) setLavaderos(data)
-    }
-    cargarLavaderos()
-  }, [])
+  async function cargarDatos() {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) setNombreUsuario(user.email?.split('@')[0] ?? '')
+    const { data } = await supabase.from("lavaderos").select("*")
+    if (data) setLavaderos(data)
+  }
+  cargarDatos()
+}, [])
 
   async function cargarServicios(lavaderoNombre: string) {
     const { data } = await supabase
@@ -53,7 +56,8 @@ export default function HomeScreen() {
     <View style={{ flex: 1 }}>
       <ScrollView style={styles.container}>
         <Text style={styles.titulo}>WashApp</Text>
-        <Text style={styles.subtitulo}>Encontrá el mejor lavadero cerca de vos</Text>
+        <Text style={styles.subtitulo}>Hola, {nombreUsuario} 👋</Text>
+        <Text style={{ color: '#aaa', fontSize: 13, marginBottom: 20 }}>Encontrá el mejor lavadero cerca de vos</Text>
 
         {lavaderos.map((lavadero) => (
           <View key={lavadero.nombre} style={styles.card}>
@@ -75,6 +79,7 @@ export default function HomeScreen() {
               onPress={() => {
                 setSeleccionado(lavadero)
                 setServicioElegido(null)
+
                 cargarServicios(lavadero.nombre)
               }}
             >
