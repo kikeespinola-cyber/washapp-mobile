@@ -55,7 +55,18 @@ export default function HomeScreen() {
   return (
     <View style={{ flex: 1 }}>
       <ScrollView style={styles.container}>
-        <Text style={styles.titulo}>WashApp</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+  <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: '#1D9E75', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+    <Text style={{ fontSize: 22, fontWeight: 'bold', color: 'white' }}>W</Text>
+    <View style={{ position: 'absolute', top: 4, right: 4, width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.9)' }} />
+    <View style={{ position: 'absolute', top: 2, right: 13, width: 5, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.6)' }} />
+    <View style={{ position: 'absolute', top: 8, right: 1, width: 4, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.4)' }} />
+  </View>
+  <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+    <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#1D9E75' }}>Wash</Text>
+    <Text style={{ fontSize: 28, fontWeight: '300', color: '#0F1923' }}>App</Text>
+  </View>
+</View>
         <Text style={styles.subtitulo}>Hola, {nombreUsuario} 👋</Text>
         <Text style={{ color: '#aaa', fontSize: 13, marginBottom: 20 }}>Encontrá el mejor lavadero cerca de vos</Text>
 
