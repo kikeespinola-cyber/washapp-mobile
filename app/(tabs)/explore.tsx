@@ -1,12 +1,27 @@
-
 import { useState, useEffect } from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native'
 import { supabase } from '../../supabase'
+import { useRouter } from 'expo-router'
 
 export default function PanelLavadero() {
+  const router = useRouter()
   const [pedidos, setPedidos] = useState<any[]>([])
 
   useEffect(() => {
+    async function verificarRol() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data } = await supabase
+          .from("perfiles")
+          .select("rol")
+          .eq("id", user.id)
+          .single()
+        if (!data || data.rol !== 'lavadero') {
+          router.replace('/')
+        }
+      }
+    }
+    verificarRol()
     cargarPedidos()
   }, [])
 
@@ -24,13 +39,11 @@ export default function PanelLavadero() {
     <ScrollView style={styles.container}>
       <Text style={styles.titulo}>Panel Lavadero</Text>
       <Text style={styles.subtitulo}>Pedidos recibidos</Text>
-
       {pedidos.map((pedido) => (
         <View key={pedido.id} style={styles.card}>
           <Text style={styles.nombre}>{pedido.lavadero_nombre}</Text>
           <Text>Precio: Gs. {pedido.precio}</Text>
           <Text>Estado: <Text style={{ color: '#1D9E75', fontWeight: 'bold' }}>{pedido.estado}</Text></Text>
-
           {pedido.estado === 'pendiente' && (
             <TouchableOpacity
               style={styles.boton}
@@ -39,7 +52,6 @@ export default function PanelLavadero() {
               <Text style={styles.botonTexto}>Confirmar pedido</Text>
             </TouchableOpacity>
           )}
-
           {pedido.estado === 'confirmado' && (
             <TouchableOpacity
               style={[styles.boton, { backgroundColor: '#F59E0B' }]}
@@ -48,7 +60,6 @@ export default function PanelLavadero() {
               <Text style={styles.botonTexto}>Iniciar lavado</Text>
             </TouchableOpacity>
           )}
-
           {pedido.estado === 'en_proceso' && (
             <TouchableOpacity
               style={[styles.boton, { backgroundColor: '#0D6E52' }]}
@@ -57,7 +68,6 @@ export default function PanelLavadero() {
               <Text style={styles.botonTexto}>Marcar listo</Text>
             </TouchableOpacity>
           )}
-
           {pedido.estado === 'listo' && (
             <Text style={{ color: '#0D6E52', fontWeight: 'bold', marginTop: 8 }}>✓ Listo para retirar</Text>
           )}
