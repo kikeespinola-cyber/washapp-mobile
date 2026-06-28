@@ -11,6 +11,7 @@ export default function HomeScreen() {
   const [resenas, setResenas] = useState<any[]>([])
   const [nombreUsuario, setNombreUsuario] = useState<string>('')
   const [busqueda, setBusqueda] = useState<string>('')
+  const [favoritos, setFavoritos] = useState<string[]>([])
 
   useEffect(() => {
     async function cargarDatos() {
@@ -20,6 +21,7 @@ export default function HomeScreen() {
       if (data) setLavaderos(data)
     }
     cargarDatos()
+    cargarFavoritos()
   }, [])
 
   async function cargarServicios(lavaderoNombre: string) {
@@ -38,6 +40,32 @@ export default function HomeScreen() {
       .order("created_at", { ascending: false })
       .limit(5)
     if (data) setResenas(data)
+  }
+
+  async function cargarFavoritos() {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data } = await supabase
+      .from("favoritos")
+      .select("lavadero_nombre")
+      .eq("user_id", user.id)
+    if (data) setFavoritos(data.map(f => f.lavadero_nombre))
+  }
+
+  async function toggleFavorito(lavaderoNombre: string) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    if (favoritos.includes(lavaderoNombre)) {
+      await supabase.from("favoritos").delete()
+        .eq("user_id", user.id)
+        .eq("lavadero_nombre", lavaderoNombre)
+    } else {
+      await supabase.from("favoritos").insert({
+        user_id: user.id,
+        lavadero_nombre: lavaderoNombre
+      })
+    }
+    cargarFavoritos()
   }
 
   async function hacerReserva() {
@@ -114,7 +142,16 @@ export default function HomeScreen() {
         )}
 
         {lavaderosFiltrados.map((lavadero) => (
-          <View key={lavadero.nombre} style={styles.card}>
+          <View key={lavadero.nombre} style={[styles.card, { position: 'relative' }]}>
+            <TouchableOpacity
+              onPress={() => toggleFavorito(lavadero.nombre)}
+              style={{ position: 'absolute', top: 14, right: 14, zIndex: 1 }}
+            >
+              <Text style={{ fontSize: 20 }}>
+                {favoritos.includes(lavadero.nombre) ? '❤️' : '🤍'}
+              </Text>
+            </TouchableOpacity>
+
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 }}>
               <View style={{ width: 44, height: 44, borderRadius: 10, backgroundColor: '#E1F5EE', alignItems: 'center', justifyContent: 'center' }}>
                 <Text style={{ fontSize: 22 }}>🚗</Text>
