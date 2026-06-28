@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Linking } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Linking, TextInput } from 'react-native'
 import { supabase } from '../../supabase'
 
 export default function HomeScreen() {
@@ -9,6 +9,7 @@ export default function HomeScreen() {
   const [servicioElegido, setServicioElegido] = useState<any>(null)
   const [horarioElegido, setHorarioElegido] = useState<string>('')
   const [nombreUsuario, setNombreUsuario] = useState<string>('')
+  const [busqueda, setBusqueda] = useState<string>('')
 
   useEffect(() => {
     async function cargarDatos() {
@@ -56,6 +57,11 @@ export default function HomeScreen() {
     }
   }
 
+  const lavaderosFiltrados = lavaderos.filter(l =>
+    l.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+    (l.zona && l.zona.toLowerCase().includes(busqueda.toLowerCase()))
+  )
+
   return (
     <View style={{ flex: 1 }}>
       <ScrollView style={styles.container}>
@@ -72,9 +78,31 @@ export default function HomeScreen() {
           </View>
         </View>
         <Text style={styles.subtitulo}>Hola, {nombreUsuario} 👋</Text>
-        <Text style={{ color: '#aaa', fontSize: 13, marginBottom: 20 }}>Encontrá el mejor lavadero cerca de vos</Text>
+        <Text style={{ color: '#aaa', fontSize: 13, marginBottom: 12 }}>Encontrá el mejor lavadero cerca de vos</Text>
 
-        {lavaderos.map((lavadero) => (
+        <TextInput
+          style={{
+            backgroundColor: '#fff',
+            borderRadius: 10,
+            borderWidth: 0.5,
+            borderColor: '#e0e0e0',
+            padding: 10,
+            fontSize: 14,
+            marginBottom: 16,
+            paddingHorizontal: 14
+          }}
+          placeholder="🔍 Buscar lavadero o zona..."
+          value={busqueda}
+          onChangeText={setBusqueda}
+        />
+
+        {lavaderosFiltrados.length === 0 && (
+          <Text style={{ color: '#aaa', textAlign: 'center', marginTop: 20 }}>
+            No encontramos lavaderos con ese nombre o zona
+          </Text>
+        )}
+
+        {lavaderosFiltrados.map((lavadero) => (
           <View key={lavadero.nombre} style={styles.card}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 }}>
               <View style={{ width: 44, height: 44, borderRadius: 10, backgroundColor: '#E1F5EE', alignItems: 'center', justifyContent: 'center' }}>
@@ -211,7 +239,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#888',
     marginTop: 8,
-    marginBottom: 20
+    marginBottom: 4
   },
   card: {
     backgroundColor: '#fff',
