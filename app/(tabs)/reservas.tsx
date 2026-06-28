@@ -41,6 +41,26 @@ export default function Reservas() {
     alert("¡Gracias por tu calificación!")
   }
 
+  async function reReservar(pedido: any) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { error } = await supabase.from("pedidos").insert({
+      lavadero_id: pedido.lavadero_id,
+      lavadero_nombre: pedido.lavadero_nombre,
+      precio: pedido.precio,
+      estado: "pendiente",
+      user_id: user.id,
+      horario: pedido.horario
+    })
+    if (error) {
+      console.log("Error:", error.message)
+    } else {
+      await supabase.rpc('sumar_puntos', { user_uuid: user.id, puntos_a_sumar: 10 })
+      alert(`¡Reserva en ${pedido.lavadero_nombre} confirmada para las ${pedido.horario}!`)
+      cargarPedidos()
+    }
+  }
+
   const colorEstado = (estado: string) => {
     if (estado === 'pendiente') return '#F59E0B'
     if (estado === 'confirmado') return '#1D9E75'
@@ -75,6 +95,13 @@ export default function Reservas() {
             <Text style={{ color: colorEstado(pedido.estado), fontWeight: 'bold', marginTop: 4, fontSize: 12 }}>
               {pedido.estado.toUpperCase()}
             </Text>
+
+            <TouchableOpacity
+              style={{ marginTop: 8, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: '#1D9E75', alignSelf: 'flex-start' }}
+              onPress={() => reReservar(pedido)}
+            >
+              <Text style={{ color: '#1D9E75', fontSize: 12, fontWeight: '500' }}>🔁 Repetir reserva</Text>
+            </TouchableOpacity>
 
             {pedido.estado === 'listo' && !pedido.calificado && (
               <TouchableOpacity
