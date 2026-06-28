@@ -144,11 +144,7 @@ export default function HomeScreen() {
         ))}
       </ScrollView>
 
-      <Modal
-        visible={seleccionado !== null}
-        transparent={true}
-        animationType="slide"
-      >
+      <Modal visible={seleccionado !== null} transparent={true} animationType="slide">
         <View style={styles.modalFondo}>
           <ScrollView style={styles.modalPanel}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
@@ -205,13 +201,14 @@ export default function HomeScreen() {
 
             {resenas.length > 0 && (
               <>
-                <Text style={{ fontSize: 13, fontWeight: '500', marginTop: 12, marginBottom: 6 }}>Reseñas recientes:</Text>
+                <Text style={{ fontSize: 13, fontWeight: '500', marginTop: 4, marginBottom: 6 }}>Reseñas recientes:</Text>
                 {resenas.map((r) => (
                   <View key={r.id} style={{ backgroundColor: '#f7f8fa', borderRadius: 8, padding: 10, marginBottom: 6 }}>
                     <Text style={{ color: '#F59E0B', fontSize: 13 }}>{'★'.repeat(r.estrellas)}{'☆'.repeat(5 - r.estrellas)}</Text>
                     <Text style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>
                       {new Date(r.created_at).toLocaleDateString('es-PY')}
                     </Text>
+                    {r.comentario ? <Text style={{ fontSize: 12, color: '#555', marginTop: 4 }}>{r.comentario}</Text> : null}
                   </View>
                 ))}
               </>

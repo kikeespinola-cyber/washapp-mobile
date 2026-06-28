@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput } from 'react-native'
 import { supabase } from '../../supabase'
 
 export default function Reservas() {
@@ -7,6 +7,7 @@ export default function Reservas() {
   const [resenaModal, setResenaModal] = useState(false)
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState<any>(null)
   const [estrellas, setEstrellas] = useState(0)
+  const [comentario, setComentario] = useState('')
 
   useEffect(() => {
     cargarPedidos()
@@ -29,11 +30,12 @@ export default function Reservas() {
       user_id: user?.id,
       lavadero_nombre: pedidoSeleccionado.lavadero_nombre,
       estrellas,
-      comentario: ''
+      comentario
     })
     await supabase.from("pedidos").update({ calificado: true }).eq("id", pedidoSeleccionado.id)
     setResenaModal(false)
     setEstrellas(0)
+    setComentario('')
     setPedidoSeleccionado(null)
     cargarPedidos()
     alert("¡Gracias por tu calificación!")
@@ -80,6 +82,7 @@ export default function Reservas() {
                 onPress={() => {
                   setPedidoSeleccionado(pedido)
                   setEstrellas(0)
+                  setComentario('')
                   setResenaModal(true)
                 }}
               >
@@ -102,7 +105,7 @@ export default function Reservas() {
               {pedidoSeleccionado?.lavadero_nombre}
             </Text>
 
-            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginBottom: 24 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginBottom: 16 }}>
               {[1, 2, 3, 4, 5].map((n) => (
                 <TouchableOpacity key={n} onPress={() => setEstrellas(n)}>
                   <Text style={{ fontSize: 36, color: n <= estrellas ? '#F59E0B' : '#e0e0e0' }}>★</Text>
@@ -111,10 +114,28 @@ export default function Reservas() {
             </View>
 
             {estrellas > 0 && (
-              <Text style={{ textAlign: 'center', color: '#1D9E75', fontWeight: '500', marginBottom: 16 }}>
+              <Text style={{ textAlign: 'center', color: '#1D9E75', fontWeight: '500', marginBottom: 12 }}>
                 {estrellas === 1 ? 'Malo' : estrellas === 2 ? 'Regular' : estrellas === 3 ? 'Bueno' : estrellas === 4 ? 'Muy bueno' : 'Excelente'}
               </Text>
             )}
+
+            <TextInput
+              style={{
+                backgroundColor: '#f7f8fa',
+                borderRadius: 10,
+                borderWidth: 0.5,
+                borderColor: '#e0e0e0',
+                padding: 12,
+                fontSize: 14,
+                marginBottom: 16,
+                minHeight: 80,
+                textAlignVertical: 'top'
+              }}
+              placeholder="Contá tu experiencia (opcional)..."
+              value={comentario}
+              onChangeText={setComentario}
+              multiline
+            />
 
             <TouchableOpacity
               style={[styles.boton, { opacity: estrellas > 0 ? 1 : 0.4 }]}
