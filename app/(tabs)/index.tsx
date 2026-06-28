@@ -46,6 +46,7 @@ export default function HomeScreen() {
       setSeleccionado(null)
       setServicioElegido(null)
       setHorarioElegido('')
+      await supabase.rpc('sumar_puntos', { user_uuid: user?.id, puntos_a_sumar: 10 })
       alert("¡Reserva confirmada!")
       if (lavaderoActual.whatsapp) {
         const mensaje = `Hola! Acabo de hacer una reserva en WashApp para ${lavaderoActual.nombre}. Servicio: ${servicioElegido.nombre}. Horario: ${horarioElegido}. Precio: Gs. ${servicioElegido.precio}.`

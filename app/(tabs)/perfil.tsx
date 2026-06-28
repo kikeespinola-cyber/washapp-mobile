@@ -15,7 +15,8 @@ export default function Perfil() {
     totalReservas: 0,
     completados: 0,
     gastado: 0,
-    ultimoLavadero: ''
+    ultimoLavadero: '',
+    puntos: 0
   })
 
   useEffect(() => {
@@ -26,7 +27,7 @@ export default function Perfil() {
 
       const { data: perfil } = await supabase
         .from("perfiles")
-        .select("rol")
+        .select("rol, puntos")
         .eq("id", user.id)
         .single()
       if (perfil) setRol(perfil.rol)
@@ -54,7 +55,8 @@ export default function Perfil() {
             totalReservas: pedidos.length,
             completados: pedidos.filter(p => p.estado === 'listo' || p.estado === 'completado').length,
             gastado: pedidos.reduce((acc, p) => acc + (p.precio || 0), 0),
-            ultimoLavadero: pedidos[0]?.lavadero_nombre ?? '—'
+            ultimoLavadero: pedidos[0]?.lavadero_nombre ?? '—',
+            puntos: perfil?.puntos ?? 0
           })
         }
       }
@@ -122,6 +124,23 @@ export default function Perfil() {
                 Gs. {statsUsuario.gastado.toLocaleString('es-PY')}
               </Text>
               <Text style={styles.statLbl}>Total invertido en lavados</Text>
+            </View>
+            <View style={[styles.statCard, { width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+              <View>
+                <Text style={{ fontSize: 11, color: '#aaa' }}>Mis puntos WashApp</Text>
+                <Text style={{ fontSize: 22, fontWeight: '500', color: '#1D9E75', marginTop: 2 }}>
+                  {statsUsuario.puntos} pts
+                </Text>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={{ fontSize: 11, color: '#aaa' }}>Próximo beneficio</Text>
+                <Text style={{ fontSize: 12, color: '#1D9E75', fontWeight: '500', marginTop: 2 }}>
+                  {50 - (statsUsuario.puntos % 50)} pts para lavado gratis
+                </Text>
+                <View style={{ width: 120, height: 6, backgroundColor: '#f0f0f0', borderRadius: 3, marginTop: 6 }}>
+                  <View style={{ width: `${(statsUsuario.puntos % 50) * 2}%`, height: 6, backgroundColor: '#1D9E75', borderRadius: 3 }} />
+                </View>
+              </View>
             </View>
           </View>
 
