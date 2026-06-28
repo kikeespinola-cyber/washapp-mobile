@@ -8,6 +8,7 @@ export default function HomeScreen() {
   const [servicios, setServicios] = useState<any[]>([])
   const [servicioElegido, setServicioElegido] = useState<any>(null)
   const [horarioElegido, setHorarioElegido] = useState<string>('')
+  const [resenas, setResenas] = useState<any[]>([])
   const [nombreUsuario, setNombreUsuario] = useState<string>('')
   const [busqueda, setBusqueda] = useState<string>('')
 
@@ -27,6 +28,16 @@ export default function HomeScreen() {
       .select("*")
       .eq("lavadero_nombre", lavaderoNombre)
     if (data) setServicios(data)
+  }
+
+  async function cargarResenas(lavaderoNombre: string) {
+    const { data } = await supabase
+      .from("resenas")
+      .select("*")
+      .eq("lavadero_nombre", lavaderoNombre)
+      .order("created_at", { ascending: false })
+      .limit(5)
+    if (data) setResenas(data)
   }
 
   async function hacerReserva() {
@@ -124,6 +135,7 @@ export default function HomeScreen() {
                 setServicioElegido(null)
                 setHorarioElegido('')
                 cargarServicios(lavadero.nombre)
+                cargarResenas(lavadero.nombre)
               }}
             >
               <Text style={styles.botonTexto}>Ver detalle</Text>
@@ -190,6 +202,20 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               ))}
             </View>
+
+            {resenas.length > 0 && (
+              <>
+                <Text style={{ fontSize: 13, fontWeight: '500', marginTop: 12, marginBottom: 6 }}>Reseñas recientes:</Text>
+                {resenas.map((r) => (
+                  <View key={r.id} style={{ backgroundColor: '#f7f8fa', borderRadius: 8, padding: 10, marginBottom: 6 }}>
+                    <Text style={{ color: '#F59E0B', fontSize: 13 }}>{'★'.repeat(r.estrellas)}{'☆'.repeat(5 - r.estrellas)}</Text>
+                    <Text style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>
+                      {new Date(r.created_at).toLocaleDateString('es-PY')}
+                    </Text>
+                  </View>
+                ))}
+              </>
+            )}
 
             {seleccionado?.abierto ? (
               <TouchableOpacity
