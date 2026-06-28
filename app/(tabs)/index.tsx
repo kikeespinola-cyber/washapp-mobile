@@ -12,6 +12,7 @@ export default function HomeScreen() {
   const [nombreUsuario, setNombreUsuario] = useState<string>('')
   const [busqueda, setBusqueda] = useState<string>('')
   const [favoritos, setFavoritos] = useState<string[]>([])
+  const [soloFavoritos, setSoloFavoritos] = useState<boolean>(false)
 
   useEffect(() => {
     async function cargarDatos() {
@@ -49,7 +50,7 @@ export default function HomeScreen() {
       .from("favoritos")
       .select("lavadero_nombre")
       .eq("user_id", user.id)
-    if (data) setFavoritos(data.map(f => f.lavadero_nombre))
+    if (data) setFavoritos(data.map((f: any) => f.lavadero_nombre))
   }
 
   async function toggleFavorito(lavaderoNombre: string) {
@@ -96,10 +97,13 @@ export default function HomeScreen() {
     }
   }
 
-  const lavaderosFiltrados = lavaderos.filter(l =>
-    l.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-    (l.zona && l.zona.toLowerCase().includes(busqueda.toLowerCase()))
-  )
+  const lavaderosFiltrados = lavaderos.filter(l => {
+    const coincideBusqueda =
+      l.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+      (l.zona && l.zona.toLowerCase().includes(busqueda.toLowerCase()))
+    const coincideFavorito = soloFavoritos ? favoritos.includes(l.nombre) : true
+    return coincideBusqueda && coincideFavorito
+  })
 
   return (
     <View style={{ flex: 1 }}>
@@ -127,7 +131,7 @@ export default function HomeScreen() {
             borderColor: '#e0e0e0',
             padding: 10,
             fontSize: 14,
-            marginBottom: 16,
+            marginBottom: 10,
             paddingHorizontal: 14
           }}
           placeholder="🔍 Buscar lavadero o zona..."
@@ -135,9 +139,31 @@ export default function HomeScreen() {
           onChangeText={setBusqueda}
         />
 
+        <TouchableOpacity
+          onPress={() => setSoloFavoritos(!soloFavoritos)}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            marginBottom: 14,
+            paddingHorizontal: 12,
+            paddingVertical: 7,
+            borderRadius: 20,
+            borderWidth: 1,
+            borderColor: soloFavoritos ? '#1D9E75' : '#e0e0e0',
+            backgroundColor: soloFavoritos ? '#E1F5EE' : '#fff',
+            alignSelf: 'flex-start'
+          }}
+        >
+          <Text style={{ fontSize: 14 }}>❤️</Text>
+          <Text style={{ fontSize: 13, color: soloFavoritos ? '#085041' : '#888', fontWeight: soloFavoritos ? '500' : '400' }}>
+            {soloFavoritos ? 'Mostrando favoritos' : 'Ver favoritos'}
+          </Text>
+        </TouchableOpacity>
+
         {lavaderosFiltrados.length === 0 && (
           <Text style={{ color: '#aaa', textAlign: 'center', marginTop: 20 }}>
-            No encontramos lavaderos con ese nombre o zona
+            {soloFavoritos ? 'No tenés favoritos todavía' : 'No encontramos lavaderos con ese nombre o zona'}
           </Text>
         )}
 
