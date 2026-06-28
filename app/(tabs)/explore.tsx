@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react'
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native'
 import { supabase } from '../../supabase'
 import { useRouter } from 'expo-router'
+import { LineChart } from 'react-native-chart-kit'
+
+const screenWidth = Dimensions.get('window').width - 40
 
 export default function PanelLavadero() {
   const router = useRouter()
   const [pedidos, setPedidos] = useState<any[]>([])
   const [clientes, setClientes] = useState<any[]>([])
-  const [tab, setTab] = useState<'pedidos' | 'clientes'>('pedidos')
+  const [tab, setTab] = useState<'pedidos' | 'clientes' | 'analytics'>('pedidos')
+  const [chartData, setChartData] = useState<any>(null)
 
   useEffect(() => {
     async function verificarRol() {
@@ -33,7 +37,28 @@ export default function PanelLavadero() {
       .from("pedidos")
       .select("*")
       .order("created_at", { ascending: false })
-    if (data) setPedidos(data)
+    if (data) {
+      setPedidos(data)
+      generarChartData(data)
+    }
+  }
+
+  function generarChartData(data: any[]) {
+    const ultimos7 = []
+    const labels = []
+    const valores = []
+
+    for (let i = 6; i >= 0; i--) {
+      const fecha = new Date()
+      fecha.setDate(fecha.getDate() - i)
+      const fechaStr = fecha.toISOString().split('T')[0]
+      const dia = fecha.toLocaleDateString('es-PY', { weekday: 'short' })
+      labels.push(dia)
+      const count = data.filter(p => p.created_at?.startsWith(fechaStr)).length
+      valores.push(count)
+    }
+
+    setChartData({ labels, datasets: [{ data: valores }] })
   }
 
   async function cargarClientes() {
@@ -85,6 +110,12 @@ export default function PanelLavadero() {
           >
             <Text style={[styles.tabTxt, tab === 'clientes' && styles.tabTxtActivo]}>Clientes</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tabBtn, tab === 'analytics' && styles.tabActivo]}
+            onPress={() => setTab('analytics')}
+          >
+            <Text style={[styles.tabTxt, tab === 'analytics' && styles.tabTxtActivo]}>Analytics</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -101,7 +132,9 @@ export default function PanelLavadero() {
                   {new Date(pedido.created_at).toLocaleDateString('es-PY')}
                 </Text>
               </View>
-              <Text style={{ color: '#555', fontSize: 13 }}>Gs. {pedido.precio?.toLocaleString('es-PY')}</Text>
+              <Text style={{ color: '#555', fontSize: 13 }}>
+                {pedido.horario && `🕐 ${pedido.horario} · `}Gs. {pedido.precio?.toLocaleString('es-PY')}
+              </Text>
               <Text style={{ fontSize: 12, marginTop: 2 }}>
                 Estado: <Text style={{ color: '#1D9E75', fontWeight: 'bold' }}>{pedido.estado}</Text>
               </Text>
@@ -132,7 +165,7 @@ export default function PanelLavadero() {
         <ScrollView style={styles.container}>
           <Text style={styles.subtitulo}>{clientes.length} cliente{clientes.length !== 1 ? 's' : ''} en total</Text>
           {clientes.length === 0 && (
-            <Text style={{ color: '#aaa', textAlign: 'center', marginTop: 40 }}>Todavía no hay clientes registrados</Text>
+            <Text style={{ color: '#aaa', textAlign: 'center', marginTop: 40 }}>Todavía no hay clientes</Text>
           )}
           {clientes.map((c, i) => (
             <View key={c.user_id} style={styles.card}>
@@ -161,6 +194,57 @@ export default function PanelLavadero() {
               </View>
             </View>
           ))}
+        </ScrollView>
+      )}
+
+      {tab === 'analytics' && (
+        <ScrollView style={styles.container}>
+          <Text style={styles.subtitulo}>Pedidos — últimos 7 días</Text>
+
+          {chartData && (
+            <LineChart
+              data={chartData}
+              width={screenWidth}
+              height={200}
+              chartConfig={{
+                backgroundColor: '#fff',
+                backgroundGradientFrom: '#fff',
+                backgroundGradientTo: '#fff',
+                decimalPlaces: 0,
+                color: (opacity = 1) => `rgba(13, 110, 82, ${opacity})`,
+                labelColor: (opacity = 1) => `rgba(100, 100, 100, ${opacity})`,
+                style: { borderRadius: 10 },
+                propsForDots: { r: '5', strokeWidth: '2', stroke: '#0D6E52' }
+              }}
+              bezier
+              style={{ borderRadius: 10, marginBottom: 16 }}
+            />
+          )}
+
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+            <View style={styles.card}>
+              <Text style={{ fontSize: 22, fontWeight: '500', color: '#0D6E52' }}>{pedidos.length}</Text>
+              <Text style={{ fontSize: 11, color: '#aaa' }}>Pedidos totales</Text>
+            </View>
+            <View style={styles.card}>
+              <Text style={{ fontSize: 22, fontWeight: '500', color: '#F59E0B' }}>
+                {pedidos.filter(p => p.estado === 'pendiente').length}
+              </Text>
+              <Text style={{ fontSize: 11, color: '#aaa' }}>Pendientes</Text>
+            </View>
+            <View style={styles.card}>
+              <Text style={{ fontSize: 22, fontWeight: '500', color: '#0D6E52' }}>
+                {pedidos.filter(p => p.estado === 'listo').length}
+              </Text>
+              <Text style={{ fontSize: 11, color: '#aaa' }}>Completados</Text>
+            </View>
+            <View style={styles.card}>
+              <Text style={{ fontSize: 14, fontWeight: '500', color: '#0D6E52' }}>
+                Gs. {pedidos.reduce((acc, p) => acc + (p.precio || 0), 0).toLocaleString('es-PY')}
+              </Text>
+              <Text style={{ fontSize: 11, color: '#aaa' }}>Total facturado</Text>
+            </View>
+          </View>
         </ScrollView>
       )}
     </View>
