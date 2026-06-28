@@ -6,6 +6,8 @@ import { useRouter } from 'expo-router'
 export default function PanelLavadero() {
   const router = useRouter()
   const [pedidos, setPedidos] = useState<any[]>([])
+  const [clientes, setClientes] = useState<any[]>([])
+  const [tab, setTab] = useState<'pedidos' | 'clientes'>('pedidos')
 
   useEffect(() => {
     async function verificarRol() {
@@ -23,11 +25,42 @@ export default function PanelLavadero() {
     }
     verificarRol()
     cargarPedidos()
+    cargarClientes()
   }, [])
 
   async function cargarPedidos() {
-    const { data } = await supabase.from("pedidos").select("*")
+    const { data } = await supabase
+      .from("pedidos")
+      .select("*")
+      .order("created_at", { ascending: false })
     if (data) setPedidos(data)
+  }
+
+  async function cargarClientes() {
+    const { data } = await supabase
+      .from("pedidos")
+      .select("user_id, lavadero_nombre, precio, estado, created_at")
+    if (!data) return
+
+    const mapa: Record<string, any> = {}
+    data.forEach((p) => {
+      if (!p.user_id) return
+      if (!mapa[p.user_id]) {
+        mapa[p.user_id] = {
+          user_id: p.user_id,
+          totalVisitas: 0,
+          totalGastado: 0,
+          ultimaVisita: p.created_at
+        }
+      }
+      mapa[p.user_id].totalVisitas++
+      mapa[p.user_id].totalGastado += p.precio || 0
+      if (p.created_at > mapa[p.user_id].ultimaVisita) {
+        mapa[p.user_id].ultimaVisita = p.created_at
+      }
+    })
+
+    setClientes(Object.values(mapa).sort((a, b) => b.totalVisitas - a.totalVisitas))
   }
 
   async function cambiarEstado(id: number, nuevoEstado: string) {
@@ -36,76 +69,162 @@ export default function PanelLavadero() {
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.titulo}>Panel Lavadero</Text>
-      <Text style={styles.subtitulo}>Pedidos recibidos</Text>
-      {pedidos.map((pedido) => (
-        <View key={pedido.id} style={styles.card}>
-          <Text style={styles.nombre}>{pedido.lavadero_nombre}</Text>
-          <Text>Precio: Gs. {pedido.precio}</Text>
-          <Text>Estado: <Text style={{ color: '#1D9E75', fontWeight: 'bold' }}>{pedido.estado}</Text></Text>
-          {pedido.estado === 'pendiente' && (
-            <TouchableOpacity
-              style={styles.boton}
-              onPress={() => cambiarEstado(pedido.id, 'confirmado')}
-            >
-              <Text style={styles.botonTexto}>Confirmar pedido</Text>
-            </TouchableOpacity>
-          )}
-          {pedido.estado === 'confirmado' && (
-            <TouchableOpacity
-              style={[styles.boton, { backgroundColor: '#F59E0B' }]}
-              onPress={() => cambiarEstado(pedido.id, 'en_proceso')}
-            >
-              <Text style={styles.botonTexto}>Iniciar lavado</Text>
-            </TouchableOpacity>
-          )}
-          {pedido.estado === 'en_proceso' && (
-            <TouchableOpacity
-              style={[styles.boton, { backgroundColor: '#0D6E52' }]}
-              onPress={() => cambiarEstado(pedido.id, 'listo')}
-            >
-              <Text style={styles.botonTexto}>Marcar listo</Text>
-            </TouchableOpacity>
-          )}
-          {pedido.estado === 'listo' && (
-            <Text style={{ color: '#0D6E52', fontWeight: 'bold', marginTop: 8 }}>✓ Listo para retirar</Text>
-          )}
+    <View style={{ flex: 1, backgroundColor: '#f7f8fa' }}>
+      <View style={styles.header}>
+        <Text style={styles.titulo}>Panel Lavadero</Text>
+        <View style={styles.tabRow}>
+          <TouchableOpacity
+            style={[styles.tabBtn, tab === 'pedidos' && styles.tabActivo]}
+            onPress={() => setTab('pedidos')}
+          >
+            <Text style={[styles.tabTxt, tab === 'pedidos' && styles.tabTxtActivo]}>Pedidos</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tabBtn, tab === 'clientes' && styles.tabActivo]}
+            onPress={() => setTab('clientes')}
+          >
+            <Text style={[styles.tabTxt, tab === 'clientes' && styles.tabTxtActivo]}>Clientes</Text>
+          </TouchableOpacity>
         </View>
-      ))}
-    </ScrollView>
+      </View>
+
+      {tab === 'pedidos' && (
+        <ScrollView style={styles.container}>
+          {pedidos.length === 0 && (
+            <Text style={{ color: '#aaa', textAlign: 'center', marginTop: 40 }}>No hay pedidos todavía</Text>
+          )}
+          {pedidos.map((pedido) => (
+            <View key={pedido.id} style={styles.card}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <Text style={styles.nombre}>{pedido.lavadero_nombre}</Text>
+                <Text style={{ fontSize: 11, color: '#aaa' }}>
+                  {new Date(pedido.created_at).toLocaleDateString('es-PY')}
+                </Text>
+              </View>
+              <Text style={{ color: '#555', fontSize: 13 }}>Gs. {pedido.precio?.toLocaleString('es-PY')}</Text>
+              <Text style={{ fontSize: 12, marginTop: 2 }}>
+                Estado: <Text style={{ color: '#1D9E75', fontWeight: 'bold' }}>{pedido.estado}</Text>
+              </Text>
+              {pedido.estado === 'pendiente' && (
+                <TouchableOpacity style={styles.boton} onPress={() => cambiarEstado(pedido.id, 'confirmado')}>
+                  <Text style={styles.botonTexto}>Confirmar pedido</Text>
+                </TouchableOpacity>
+              )}
+              {pedido.estado === 'confirmado' && (
+                <TouchableOpacity style={[styles.boton, { backgroundColor: '#F59E0B' }]} onPress={() => cambiarEstado(pedido.id, 'en_proceso')}>
+                  <Text style={styles.botonTexto}>Iniciar lavado</Text>
+                </TouchableOpacity>
+              )}
+              {pedido.estado === 'en_proceso' && (
+                <TouchableOpacity style={[styles.boton, { backgroundColor: '#0D6E52' }]} onPress={() => cambiarEstado(pedido.id, 'listo')}>
+                  <Text style={styles.botonTexto}>Marcar listo</Text>
+                </TouchableOpacity>
+              )}
+              {pedido.estado === 'listo' && (
+                <Text style={{ color: '#0D6E52', fontWeight: 'bold', marginTop: 8 }}>✓ Listo para retirar</Text>
+              )}
+            </View>
+          ))}
+        </ScrollView>
+      )}
+
+      {tab === 'clientes' && (
+        <ScrollView style={styles.container}>
+          <Text style={styles.subtitulo}>{clientes.length} cliente{clientes.length !== 1 ? 's' : ''} en total</Text>
+          {clientes.length === 0 && (
+            <Text style={{ color: '#aaa', textAlign: 'center', marginTop: 40 }}>Todavía no hay clientes registrados</Text>
+          )}
+          {clientes.map((c, i) => (
+            <View key={c.user_id} style={styles.card}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#E1F5EE', alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#0D6E52' }}>#{i + 1}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.nombre}>Cliente {i + 1}</Text>
+                  <Text style={{ color: '#888', fontSize: 12 }}>
+                    Última visita: {new Date(c.ultimaVisita).toLocaleDateString('es-PY')}
+                  </Text>
+                </View>
+              </View>
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+                <View style={{ flex: 1, backgroundColor: '#f7f8fa', borderRadius: 8, padding: 10, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 18, fontWeight: '500', color: '#0D6E52' }}>{c.totalVisitas}</Text>
+                  <Text style={{ fontSize: 11, color: '#aaa' }}>Visitas</Text>
+                </View>
+                <View style={{ flex: 1, backgroundColor: '#f7f8fa', borderRadius: 8, padding: 10, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 14, fontWeight: '500', color: '#0D6E52' }}>
+                    Gs. {c.totalGastado.toLocaleString('es-PY')}
+                  </Text>
+                  <Text style={{ fontSize: 11, color: '#aaa' }}>Total gastado</Text>
+                </View>
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+      )}
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 12,
     backgroundColor: '#f7f8fa'
   },
+  container: {
+    flex: 1,
+    padding: 20
+  },
   titulo: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#0D6E52',
-    marginTop: 60
+    marginBottom: 14
   },
   subtitulo: {
-    fontSize: 16,
+    fontSize: 13,
     color: '#888',
-    marginTop: 8,
-    marginBottom: 20
+    marginBottom: 14
+  },
+  tabRow: {
+    flexDirection: 'row',
+    gap: 8
+  },
+  tabBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 0.5,
+    borderColor: '#e0e0e0',
+    backgroundColor: '#fff'
+  },
+  tabActivo: {
+    backgroundColor: '#0D6E52',
+    borderColor: '#0D6E52'
+  },
+  tabTxt: {
+    fontSize: 13,
+    color: '#888'
+  },
+  tabTxtActivo: {
+    color: '#fff',
+    fontWeight: '500'
   },
   card: {
     backgroundColor: '#fff',
     borderRadius: 10,
-    padding: 15,
+    padding: 14,
     marginBottom: 10,
     borderWidth: 0.5,
     borderColor: '#e8e8e8'
   },
   nombre: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111',
     marginBottom: 4
   },
   boton: {
