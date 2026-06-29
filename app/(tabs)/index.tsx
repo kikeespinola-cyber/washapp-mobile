@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Linking, TextInput } from 'react-native'
 import { supabase } from '../../supabase'
+import * as Location from 'expo-location'
 
 export default function HomeScreen() {
   const [lavaderos, setLavaderos] = useState<any[]>([])
@@ -14,6 +15,7 @@ export default function HomeScreen() {
   const [favoritos, setFavoritos] = useState<string[]>([])
   const [soloFavoritos, setSoloFavoritos] = useState<boolean>(false)
   const [ordenamiento, setOrdenamiento] = useState<'distancia' | 'calificacion'>('calificacion')
+  const [ubicacion, setUbicacion] = useState<{ lat: number, lng: number } | null>(null)
 
   useEffect(() => {
     async function cargarDatos() {
@@ -24,7 +26,15 @@ export default function HomeScreen() {
     }
     cargarDatos()
     cargarFavoritos()
+    obtenerUbicacion()
   }, [])
+
+  async function obtenerUbicacion() {
+    const { status } = await Location.requestForegroundPermissionsAsync()
+    if (status !== 'granted') return
+    const loc = await Location.getCurrentPositionAsync({})
+    setUbicacion({ lat: loc.coords.latitude, lng: loc.coords.longitude })
+  }
 
   async function cargarServicios(lavaderoNombre: string) {
     const { data } = await supabase.from("servicios").select("*").eq("lavadero_nombre", lavaderoNombre)
@@ -90,7 +100,15 @@ export default function HomeScreen() {
       const coincideFavorito = soloFavoritos ? favoritos.includes(l.nombre) : true
       return coincideBusqueda && coincideFavorito
     })
-    .sort((a, b) => ordenamiento === 'calificacion' ? b.calificacion - a.calificacion : 0)
+    .sort((a, b) => {
+      if (ordenamiento === 'calificacion') return b.calificacion - a.calificacion
+      if (ordenamiento === 'distancia' && ubicacion && a.latitud && b.latitud) {
+        const distA = Math.sqrt(Math.pow(a.latitud - ubicacion.lat, 2) + Math.pow(a.longitud - ubicacion.lng, 2))
+        const distB = Math.sqrt(Math.pow(b.latitud - ubicacion.lat, 2) + Math.pow(b.longitud - ubicacion.lng, 2))
+        return distA - distB
+      }
+      return 0
+    })
 
   return (
     <View style={{ flex: 1 }}>

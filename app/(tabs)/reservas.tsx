@@ -56,7 +56,7 @@ export default function Reservas() {
       console.log("Error:", error.message)
     } else {
       await supabase.rpc('sumar_puntos', { user_uuid: user.id, puntos_a_sumar: 10 })
-      alert(`¡Reserva en ${pedido.lavadero_nombre} confirmada para las ${pedido.horario}!`)
+      alert(`¡Reserva en ${pedido.lavadero_nombre} confirmada${pedido.horario ? ` para las ${pedido.horario}` : ''}!`)
       cargarPedidos()
     }
   }
