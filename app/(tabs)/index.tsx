@@ -13,6 +13,7 @@ export default function HomeScreen() {
   const [busqueda, setBusqueda] = useState<string>('')
   const [favoritos, setFavoritos] = useState<string[]>([])
   const [soloFavoritos, setSoloFavoritos] = useState<boolean>(false)
+  const [ordenamiento, setOrdenamiento] = useState<'distancia' | 'calificacion'>('calificacion')
 
   useEffect(() => {
     async function cargarDatos() {
@@ -26,30 +27,19 @@ export default function HomeScreen() {
   }, [])
 
   async function cargarServicios(lavaderoNombre: string) {
-    const { data } = await supabase
-      .from("servicios")
-      .select("*")
-      .eq("lavadero_nombre", lavaderoNombre)
+    const { data } = await supabase.from("servicios").select("*").eq("lavadero_nombre", lavaderoNombre)
     if (data) setServicios(data)
   }
 
   async function cargarResenas(lavaderoNombre: string) {
-    const { data } = await supabase
-      .from("resenas")
-      .select("*")
-      .eq("lavadero_nombre", lavaderoNombre)
-      .order("created_at", { ascending: false })
-      .limit(5)
+    const { data } = await supabase.from("resenas").select("*").eq("lavadero_nombre", lavaderoNombre).order("created_at", { ascending: false }).limit(5)
     if (data) setResenas(data)
   }
 
   async function cargarFavoritos() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    const { data } = await supabase
-      .from("favoritos")
-      .select("lavadero_nombre")
-      .eq("user_id", user.id)
+    const { data } = await supabase.from("favoritos").select("lavadero_nombre").eq("user_id", user.id)
     if (data) setFavoritos(data.map((f: any) => f.lavadero_nombre))
   }
 
@@ -57,14 +47,9 @@ export default function HomeScreen() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     if (favoritos.includes(lavaderoNombre)) {
-      await supabase.from("favoritos").delete()
-        .eq("user_id", user.id)
-        .eq("lavadero_nombre", lavaderoNombre)
+      await supabase.from("favoritos").delete().eq("user_id", user.id).eq("lavadero_nombre", lavaderoNombre)
     } else {
-      await supabase.from("favoritos").insert({
-        user_id: user.id,
-        lavadero_nombre: lavaderoNombre
-      })
+      await supabase.from("favoritos").insert({ user_id: user.id, lavadero_nombre: lavaderoNombre })
     }
     cargarFavoritos()
   }
@@ -97,13 +82,15 @@ export default function HomeScreen() {
     }
   }
 
-  const lavaderosFiltrados = lavaderos.filter(l => {
-    const coincideBusqueda =
-      l.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-      (l.zona && l.zona.toLowerCase().includes(busqueda.toLowerCase()))
-    const coincideFavorito = soloFavoritos ? favoritos.includes(l.nombre) : true
-    return coincideBusqueda && coincideFavorito
-  })
+  const lavaderosFiltrados = lavaderos
+    .filter(l => {
+      const coincideBusqueda =
+        l.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+        (l.zona && l.zona.toLowerCase().includes(busqueda.toLowerCase()))
+      const coincideFavorito = soloFavoritos ? favoritos.includes(l.nombre) : true
+      return coincideBusqueda && coincideFavorito
+    })
+    .sort((a, b) => ordenamiento === 'calificacion' ? b.calificacion - a.calificacion : 0)
 
   return (
     <View style={{ flex: 1 }}>
@@ -124,60 +111,53 @@ export default function HomeScreen() {
         <Text style={{ color: '#aaa', fontSize: 13, marginBottom: 12 }}>Encontrá el mejor lavadero cerca de vos</Text>
 
         <TextInput
-          style={{
-            backgroundColor: '#fff',
-            borderRadius: 10,
-            borderWidth: 0.5,
-            borderColor: '#e0e0e0',
-            padding: 10,
-            fontSize: 14,
-            marginBottom: 10,
-            paddingHorizontal: 14
-          }}
+          style={{ backgroundColor: '#fff', borderRadius: 10, borderWidth: 0.5, borderColor: '#e0e0e0', padding: 10, fontSize: 14, marginBottom: 10, paddingHorizontal: 14 }}
           placeholder="🔍 Buscar lavadero o zona..."
           value={busqueda}
           onChangeText={setBusqueda}
         />
 
-        <TouchableOpacity
-          onPress={() => setSoloFavoritos(!soloFavoritos)}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 6,
-            marginBottom: 14,
-            paddingHorizontal: 12,
-            paddingVertical: 7,
-            borderRadius: 20,
-            borderWidth: 1,
-            borderColor: soloFavoritos ? '#1D9E75' : '#e0e0e0',
-            backgroundColor: soloFavoritos ? '#E1F5EE' : '#fff',
-            alignSelf: 'flex-start'
-          }}
-        >
-          <Text style={{ fontSize: 14 }}>❤️</Text>
-          <Text style={{ fontSize: 13, color: soloFavoritos ? '#085041' : '#888', fontWeight: soloFavoritos ? '500' : '400' }}>
-            {soloFavoritos ? 'Mostrando favoritos' : 'Ver favoritos'}
-          </Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+          <TouchableOpacity
+            onPress={() => setSoloFavoritos(!soloFavoritos)}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: soloFavoritos ? '#1D9E75' : '#e0e0e0', backgroundColor: soloFavoritos ? '#E1F5EE' : '#fff' }}
+          >
+            <Text style={{ fontSize: 14 }}>❤️</Text>
+            <Text style={{ fontSize: 12, color: soloFavoritos ? '#085041' : '#888', fontWeight: soloFavoritos ? '500' : '400' }}>
+              {soloFavoritos ? 'Favoritos' : 'Ver favoritos'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setOrdenamiento('calificacion')}
+            style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: ordenamiento === 'calificacion' ? '#1D9E75' : '#e0e0e0', backgroundColor: ordenamiento === 'calificacion' ? '#E1F5EE' : '#fff' }}
+          >
+            <Text style={{ fontSize: 12, color: ordenamiento === 'calificacion' ? '#085041' : '#888', fontWeight: ordenamiento === 'calificacion' ? '500' : '400' }}>
+              ⭐ Mejor calificados
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setOrdenamiento('distancia')}
+            style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: ordenamiento === 'distancia' ? '#1D9E75' : '#e0e0e0', backgroundColor: ordenamiento === 'distancia' ? '#E1F5EE' : '#fff' }}
+          >
+            <Text style={{ fontSize: 12, color: ordenamiento === 'distancia' ? '#085041' : '#888', fontWeight: ordenamiento === 'distancia' ? '500' : '400' }}>
+              📍 Más cercanos
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         {lavaderosFiltrados.length === 0 && (
           <Text style={{ color: '#aaa', textAlign: 'center', marginTop: 20 }}>
-            {soloFavoritos ? 'No tenés favoritos todavía' : 'No encontramos lavaderos con ese nombre o zona'}
+            {soloFavoritos ? 'No tenés favoritos todavía' : 'No encontramos lavaderos'}
           </Text>
         )}
 
         {lavaderosFiltrados.map((lavadero) => (
           <View key={lavadero.nombre} style={[styles.card, { position: 'relative' }]}>
-            <TouchableOpacity
-              onPress={() => toggleFavorito(lavadero.nombre)}
-              style={{ position: 'absolute', top: 14, right: 14, zIndex: 1 }}
-            >
-              <Text style={{ fontSize: 20 }}>
-                {favoritos.includes(lavadero.nombre) ? '❤️' : '🤍'}
-              </Text>
+            <TouchableOpacity onPress={() => toggleFavorito(lavadero.nombre)} style={{ position: 'absolute', top: 14, right: 14, zIndex: 1 }}>
+              <Text style={{ fontSize: 20 }}>{favoritos.includes(lavadero.nombre) ? '❤️' : '🤍'}</Text>
             </TouchableOpacity>
-
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 }}>
               <View style={{ width: 44, height: 44, borderRadius: 10, backgroundColor: '#E1F5EE', alignItems: 'center', justifyContent: 'center' }}>
                 <Text style={{ fontSize: 22 }}>🚗</Text>
@@ -226,14 +206,7 @@ export default function HomeScreen() {
               <TouchableOpacity
                 key={servicio.id}
                 onPress={() => setServicioElegido(servicio)}
-                style={{
-                  padding: 10,
-                  borderRadius: 8,
-                  marginBottom: 6,
-                  borderWidth: 1.5,
-                  borderColor: servicioElegido?.id === servicio.id ? '#1D9E75' : '#e0e0e0',
-                  backgroundColor: servicioElegido?.id === servicio.id ? '#E1F5EE' : '#fff'
-                }}
+                style={{ padding: 10, borderRadius: 8, marginBottom: 6, borderWidth: 1.5, borderColor: servicioElegido?.id === servicio.id ? '#1D9E75' : '#e0e0e0', backgroundColor: servicioElegido?.id === servicio.id ? '#E1F5EE' : '#fff' }}
               >
                 <Text style={{ fontWeight: '500' }}>{servicio.nombre}</Text>
                 <Text style={{ color: '#1D9E75', fontSize: 12 }}>Gs. {servicio.precio} · {servicio.duracion_minutos} min</Text>
@@ -246,14 +219,7 @@ export default function HomeScreen() {
                 <TouchableOpacity
                   key={hora}
                   onPress={() => setHorarioElegido(hora)}
-                  style={{
-                    paddingHorizontal: 14,
-                    paddingVertical: 8,
-                    borderRadius: 8,
-                    borderWidth: 1.5,
-                    borderColor: horarioElegido === hora ? '#1D9E75' : '#e0e0e0',
-                    backgroundColor: horarioElegido === hora ? '#E1F5EE' : '#fff'
-                  }}
+                  style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, borderWidth: 1.5, borderColor: horarioElegido === hora ? '#1D9E75' : '#e0e0e0', backgroundColor: horarioElegido === hora ? '#E1F5EE' : '#fff' }}
                 >
                   <Text style={{ fontSize: 13, color: horarioElegido === hora ? '#085041' : '#555', fontWeight: horarioElegido === hora ? '500' : '400' }}>
                     {hora}
@@ -268,9 +234,7 @@ export default function HomeScreen() {
                 {resenas.map((r) => (
                   <View key={r.id} style={{ backgroundColor: '#f7f8fa', borderRadius: 8, padding: 10, marginBottom: 6 }}>
                     <Text style={{ color: '#F59E0B', fontSize: 13 }}>{'★'.repeat(r.estrellas)}{'☆'.repeat(5 - r.estrellas)}</Text>
-                    <Text style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>
-                      {new Date(r.created_at).toLocaleDateString('es-PY')}
-                    </Text>
+                    <Text style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>{new Date(r.created_at).toLocaleDateString('es-PY')}</Text>
                     {r.comentario ? <Text style={{ fontSize: 12, color: '#555', marginTop: 4 }}>{r.comentario}</Text> : null}
                   </View>
                 ))}
@@ -283,9 +247,7 @@ export default function HomeScreen() {
                 onPress={hacerReserva}
               >
                 <Text style={styles.botonTexto}>
-                  {servicioElegido && horarioElegido
-                    ? `Reservar ${horarioElegido} — Gs. ${servicioElegido.precio}`
-                    : 'Elegí servicio y horario'}
+                  {servicioElegido && horarioElegido ? `Reservar ${horarioElegido} — Gs. ${servicioElegido.precio}` : 'Elegí servicio y horario'}
                 </Text>
               </TouchableOpacity>
             ) : (
@@ -294,11 +256,7 @@ export default function HomeScreen() {
 
             <TouchableOpacity
               style={[styles.boton, { backgroundColor: '#f1f1f1', marginTop: 10 }]}
-              onPress={() => {
-                setSeleccionado(null)
-                setServicioElegido(null)
-                setHorarioElegido('')
-              }}
+              onPress={() => { setSeleccionado(null); setServicioElegido(null); setHorarioElegido('') }}
             >
               <Text style={{ color: '#555', fontWeight: 'bold' }}>Cerrar</Text>
             </TouchableOpacity>
@@ -310,56 +268,13 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: '#f7f8fa'
-  },
-  titulo: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#1D9E75',
-    marginTop: 60
-  },
-  subtitulo: {
-    fontSize: 16,
-    color: '#888',
-    marginTop: 8,
-    marginBottom: 4
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 10,
-    borderWidth: 0.5,
-    borderColor: '#e8e8e8'
-  },
-  nombre: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 4
-  },
-  boton: {
-    backgroundColor: '#1D9E75',
-    borderRadius: 8,
-    padding: 10,
-    marginTop: 10,
-    alignItems: 'center'
-  },
-  botonTexto: {
-    color: '#fff',
-    fontWeight: 'bold'
-  },
-  modalFondo: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.3)'
-  },
-  modalPanel: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 24,
-    maxHeight: '80%'
-  }
+  container: { flex: 1, padding: 20, backgroundColor: '#f7f8fa' },
+  titulo: { fontSize: 32, fontWeight: 'bold', color: '#1D9E75', marginTop: 60 },
+  subtitulo: { fontSize: 16, color: '#888', marginTop: 8, marginBottom: 4 },
+  card: { backgroundColor: '#fff', borderRadius: 10, padding: 15, marginBottom: 10, borderWidth: 0.5, borderColor: '#e8e8e8' },
+  nombre: { fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
+  boton: { backgroundColor: '#1D9E75', borderRadius: 8, padding: 10, marginTop: 10, alignItems: 'center' },
+  botonTexto: { color: '#fff', fontWeight: 'bold' },
+  modalFondo: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.3)' },
+  modalPanel: { backgroundColor: '#fff', borderRadius: 20, padding: 24, maxHeight: '80%' }
 })
